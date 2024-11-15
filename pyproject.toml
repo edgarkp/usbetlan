@@ -1,13 +1,18 @@
 [tool.poetry]
-name = "usbetlan"
+name = "src"
 version = "0.1.0"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["edgarkp <edgar.kouajiep@gmail.com>"]
 readme = "README.md"
-packages = [{include = "usbetlan", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.13"
+yfinance = "^0.2.49"
+pandas = "^2.2.3"
+numpy = "^2.1.3"
+pytest = "^8.3.3"
+seaborn = "^0.13.2"
+matplotlib = "^3.9.2"
 
 
 [build-system]
