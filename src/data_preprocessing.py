@@ -1,4 +1,5 @@
 # This set of functions are used to fetch values in YF database and construct inputs for Optimization
+import os
 import pandas as pd
 import numpy as np
 from datetime import date
@@ -23,7 +24,7 @@ def fetch_data(list_stocks, interval):
 
     return dict_stock_data
 
-def construct_data(dict_stock_data):
+def format_data(dict_stock_data):
     duration = 660 #30 months of recording data
     length=[]
 
@@ -53,5 +54,24 @@ def construct_data(dict_stock_data):
         selected_stock_data = dict_stock_data[symbol]
         stock_df = selected_stock_data[start:end]
         df[symbol]=stock_df['Adj Close']
+
+    return df
+
+def extract_load_transform_data(list_stocks, interval):
+    filename = ''
+    for stock in list_stocks:
+        filename += stock.split('.')[0] + '_'
+
+    filename = filename + date.today().strftime('%Y_%m_%d') 
+    filepath = 'data/' + filename
+    if os.path.exists(filepath) :
+        print(f"Loading data from {filepath}")
+        df = pd.read_csv(filepath, index_col = 'Date', parse_dates = True)
+    else: 
+        results = fetch_data(list_stocks, interval)
+        df = format_data(results)
+
+        print(f"Saving data for {filepath}")
+        df.to_csv(filepath)
 
     return df
