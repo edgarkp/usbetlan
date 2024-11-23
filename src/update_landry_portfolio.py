@@ -1,6 +1,6 @@
 # Import necessary modules
 from utils import Portfolio
-from data_preprocessing import extract_load_transform_data
+from backend import elt_price_data
 import numpy as np
 
 
@@ -8,7 +8,7 @@ list_stocks = ['BNP.PA', 'IPS.PA', 'TTE.PA', 'STMPA.PA']
 Vo = 100000 # initial investment 
 
 # step 1 : Get necessary prices data & previous value of the stock 
-df = extract_load_transform_data(list_stocks, '1d')
+df = elt_price_data(list_stocks, '1d')
 list_price = df.tail(2) # get today and previous day prices
 
 list_value = [25000, 25000, 25000, 25000] # to be in a function such as list_price

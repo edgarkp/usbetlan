@@ -1,15 +1,14 @@
-# This set of functions are used to fetch values in YF database and construct inputs for Optimization
 import os
-import pandas as pd
-import numpy as np
-from datetime import date
-import yfinance as yf
-
 import warnings
 warnings.filterwarnings("ignore")
 
-def fetch_data(list_stocks, interval):
+from datetime import date
+import yfinance as yf
+import pandas as pd
+import numpy as np
 
+def fetch_price_data(list_stocks, interval):
+    """" A function to read the data from Yahoo Finance """
     dict_stock_data = dict()
 
     today = date.today()
@@ -24,7 +23,8 @@ def fetch_data(list_stocks, interval):
 
     return dict_stock_data
 
-def format_data(dict_stock_data):
+def format_price_data(dict_stock_data):
+    """" A function to format the price data fetched in Yahoo Finance """
     duration = 660 #30 months of recording data
     length=[]
 
@@ -57,7 +57,9 @@ def format_data(dict_stock_data):
 
     return df
 
-def extract_load_transform_data(list_stocks, interval):
+def elt_price_data(list_stocks, interval):
+    """" A function performing ELT (Extract Load Transform): 
+    to read and format the price data fetched in Yahoo Finance """
     filename = ''
     for stock in list_stocks:
         filename += stock.split('.')[0] + '_'
@@ -68,10 +70,50 @@ def extract_load_transform_data(list_stocks, interval):
         print(f"Loading data from {filepath}")
         df = pd.read_csv(filepath, index_col = 'Date', parse_dates = True)
     else: 
-        results = fetch_data(list_stocks, interval)
-        df = format_data(results)
+        results = fetch_price_data(list_stocks, interval)
+        df = format_price_data(results)
 
         print(f"Saving data for {filepath}")
         df.to_csv(filepath)
 
     return df
+
+def get_previous_portfolio_state() :
+    """ A function to retrieve last state (t - 1) of portfolio :
+    Vi(t-1) : value of a stock
+    wi(t-1) : weight of a stock 
+    Vn(t-1) : net portfolio value 
+    E(t-1) : Total transactions expenses  
+    C(t-1) : Remaining cash from transaction
+    
+    NB: The available cash in the portfolio is C(t-1) - E(t-1)
+    """
+    Vo = 100000 # initial investment
+    list_value = [25000, 25000, 25000, 25000] 
+    Vg = Vo
+    Vn = Vo 
+    E = 0 
+    C = 0 
+    list_weights = [0.25, 0.25, 0.25, 0.25]
+
+    results = list_value + [Vg, E, C, Vn]
+    print(results)
+    return list_weights, results
+
+
+def update_weights():
+    """ A function to check if the Portfolio needs to be updated"""
+
+    return True 
+
+def set_previous_portfolio_state(list_weights, results) :
+    """ A function to store the current state t of portfolio :
+    Vi(t) : value of a stock
+    wi(t) : weight of a stock 
+    Vg(t) : gross portfolio value
+    Vn(t) : net portfolio value 
+    R(t) : portfolio return
+    E(t) : Total transactions expenses  
+    C(t) : Remaining cash from transaction
+
+    NB: The available cash in the portfolio is C(t) - E(t)"""
