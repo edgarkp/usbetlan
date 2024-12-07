@@ -1,20 +1,65 @@
 # Import necessary modules
 from utils import Portfolio
 from backend import elt_price_data, get_previous_portfolio_state, set_previous_portfolio_state, update_weights
+from sqlalchemy.orm import Session
+from sqlalchemy import create_engine, Table, Column, MetaData, JSON, Float, TIMESTAMP
 import numpy as np
 
+# step 0: Connect to the database and fetch previous state
+# Connection info
+username = "postgres"
+password = "myfirstdatabase"
+host = "portfoliodb.cxcciogmujrs.eu-north-1.rds.amazonaws.com"
+port = "5432"
+database = "initial_db"
 
-list_stocks = ['BNP.PA', 'IPS.PA', 'TTE.PA', 'STMPA.PA']
+# PostgreSQL connection string
+DATABASE_URL = f"postgresql+psycopg://{username}:{password}@{host}:{port}/{database}"
+
+engine = create_engine(DATABASE_URL)
+
+try:
+    with engine.connect() as connection:
+        print("Connection successful!")
+
+        metadata = MetaData()
+        
+        # Define tables
+        portfolio_states = Table (
+            "portfolio_states", metadata,
+            Column("timestamp", TIMESTAMP, primary_key = True),
+            Column("stocks", JSON, nullable = False),
+            Column("gross_portfolio_value", Float, nullable = True),
+            Column("total_transaction_fees", Float, nullable= True),
+            Column("available_cash", Float, nullable= True),
+            Column("net_portfolio_value", Float, nullable = True),
+            Column("portfolio_return", Float, nullable = True)
+        )
+
+        portfolio_weights = Table (
+            "portfolio_weights", metadata,
+            Column("timestamp", TIMESTAMP, primary_key = True),
+            Column("weights", JSON, nullable = False)
+        )
+    
+        metadata.create_all(engine)
+
+    with Session(engine) as session:
+        print("Retrieving data ...")
+        latest_state = get_previous_portfolio_state(session, portfolio_states, portfolio_weights)
+
+except Exception as e:
+    print(f"Connection failed: {e}")
 
 # step 1 : Get necessary prices data & previous value of the stock & previous weights 
-df = elt_price_data(list_stocks, '1d')
+list_stocks, list_weights_bfr, results = latest_state
 
-list_weights_bfr, results = get_previous_portfolio_state()
 list_value = results[0:4]
 Vg_last = results[4]
 E_bfr = results[5] 
 C_bfr = results[6] 
 Vn_last = results[7] 
+df = elt_price_data(list_stocks, '1d')
 
 portfolio = Portfolio(list_stocks,list_weights_bfr,df) # current portfolio
 
@@ -141,6 +186,14 @@ for i,w in enumerate(list_weights_opti):
         print(f"{list_stocks[i]} : {round(list_weights_bfr[i]*100)}% -> {round(w*100)}% -> {round(list_weights_afr[i]*100)}%")
 
 # step 8 : Save results
-set_previous_portfolio_state(list_weights_afr, results)
+with Session(engine) as session:
+    print("Storing data ...")
+    # print(list_weights_afr)
+    # print(list_stocks)
+    # print(len(list_stocks))
+    # print(results)
+    set_previous_portfolio_state(session, portfolio_states, portfolio_weights, list_stocks, list_weights_afr, results)
+    print("Storing complete")
+    
 
     

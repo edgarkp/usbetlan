@@ -2,7 +2,7 @@ import os
 import warnings
 warnings.filterwarnings("ignore")
 
-from datetime import date
+from datetime import date, datetime
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -78,7 +78,7 @@ def elt_price_data(list_stocks, interval):
 
     return df
 
-def get_previous_portfolio_state() :
+def get_previous_portfolio_state(session, portfolio_states, portfolio_weights) :
     """ A function to retrieve last state (t - 1) of portfolio :
     Vi(t-1) : value of a stock
     wi(t-1) : weight of a stock 
@@ -88,25 +88,35 @@ def get_previous_portfolio_state() :
     
     NB: The available cash in the portfolio is C(t-1) - E(t-1)
     """
-    Vo = 100000 # initial investment
-    list_value = [25000, 25000, 25000, 25000] 
-    Vg = Vo
-    Vn = Vo 
-    E = 0 
-    C = 0 
-    list_weights = [0.25, 0.25, 0.25, 0.25]
+    query_states = portfolio_states.select().order_by(portfolio_states.c.timestamp.desc()).limit(1)
+    query_weights = portfolio_weights.select().order_by(portfolio_weights.c.timestamp.desc()).limit(1)
+    
+    data_states = session.execute(query_states).fetchone()
+    data_weights = session.execute(query_weights).fetchone()
 
-    results = list_value + [Vg, E, C, Vn]
-    print(results)
-    return list_weights, results
+    (timestamp_states, list_value_raw, Vg, E, C, Vn, R) = data_states
+    (timestamp_weights, list_weights_raw) = data_weights
 
+    if timestamp_weights == timestamp_states :
+       list_stocks = [i for i in list_value_raw.keys()]
+       list_weights = [val for val in list_weights_raw.values()]
+       results = [val for val in list_value_raw.values()]
+       results.append(Vg)
+       results.append(E)
+       results.append(C)
+       results.append(Vn)
+       results.append(R)
+       
+       return list_stocks, list_weights, results
+    else:
+        print("the extracted timestamps don't match")
 
 def update_weights():
     """ A function to check if the Portfolio needs to be updated"""
 
     return True 
 
-def set_previous_portfolio_state(list_weights, results) :
+def set_previous_portfolio_state(session, portfolio_states, portfolio_weights, list_stocks, list_weights, results) :
     """ A function to store the current state t of portfolio :
     Vi(t) : value of a stock
     wi(t) : weight of a stock 
@@ -117,3 +127,37 @@ def set_previous_portfolio_state(list_weights, results) :
     C(t) : Remaining cash from transaction
 
     NB: The available cash in the portfolio is C(t) - E(t)"""
+    timestamp = datetime.now().strftime('%Y-%b-%d')
+
+    list_value = results[0:3]
+
+    dict_vals = dict()
+    dict_weights = dict()
+
+    for i in range(len(list_stocks)-1):
+        stock = list_stocks[i]
+        val = list_value[i]
+        weight = list_weights[i]
+
+        dict_vals[stock] = val
+        dict_weights[stock] = weight
+
+    current_state = {
+        "timestamp": timestamp,
+        "stocks": dict_vals,
+        "gross_portfolio_value": results[4],
+        "total_transaction_fees": results[5],
+        "available_cash": results[6],
+        "net_portfolio_value": results[7],
+        "portfolio_return": results[8] 
+    }
+
+    current_weight = {
+        "timestamp": timestamp,
+        "weights": dict_weights,
+    }
+
+    session.execute(portfolio_states.insert().values(current_state))
+    session.execute(portfolio_weights.insert().values(current_weight))
+    session.commit()
+
