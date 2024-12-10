@@ -1,8 +1,10 @@
+from sqlalchemy import text, create_engine, Table, Column, MetaData, JSON, Float, TIMESTAMP
+from sqlalchemy.orm import Session
 import os
 import warnings
 warnings.filterwarnings("ignore")
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -78,7 +80,22 @@ def elt_price_data(list_stocks, interval):
 
     return df
 
-def get_previous_portfolio_state(session, portfolio_states, portfolio_weights) :
+def check_engine(URL):
+    engine = create_engine(URL)
+
+    with engine.connect() as connection:
+        print("Connection successful!")
+        return engine
+
+def get_table_name_by_id(engine, portfolio_id):
+    """ A function to retrieve table name by ID """
+    query = text('SELECT portfolio_name FROM portfolio_registry WHERE portfolio_id = :portfolio_id')
+    with Session(engine) as session:
+        query_portfolio = session.execute(query, {"portfolio_id": portfolio_id})
+        result = query_portfolio.fetchone()
+        return result[0] if result else None
+
+def get_previous_portfolio_state(engine, portfolio_id) :
     """ A function to retrieve last state (t - 1) of portfolio :
     Vi(t-1) : value of a stock
     wi(t-1) : weight of a stock 
@@ -88,35 +105,32 @@ def get_previous_portfolio_state(session, portfolio_states, portfolio_weights) :
     
     NB: The available cash in the portfolio is C(t-1) - E(t-1)
     """
-    query_states = portfolio_states.select().order_by(portfolio_states.c.timestamp.desc()).limit(1)
-    query_weights = portfolio_weights.select().order_by(portfolio_weights.c.timestamp.desc()).limit(1)
-    
-    data_states = session.execute(query_states).fetchone()
-    data_weights = session.execute(query_weights).fetchone()
+    table_name = get_table_name_by_id(engine, portfolio_id)
+    if not table_name:
+        print(f"Data not found")
+        return 
+    else :
+        with Session(engine) as session:
+            query = text(f"SELECT * FROM {table_name} ORDER BY timestamp DESC LIMIT 1")
+            data_states = session.execute(query).fetchone()
+            (timestamp, list_value_raw, list_weights_raw, Vg, E, C, Vn, R) = data_states
 
-    (timestamp_states, list_value_raw, Vg, E, C, Vn, R) = data_states
-    (timestamp_weights, list_weights_raw) = data_weights
+            list_stocks = [i for i in list_value_raw.keys()]
 
-    if timestamp_weights == timestamp_states :
-       list_stocks = [i for i in list_value_raw.keys()]
-       list_weights = [val for val in list_weights_raw.values()]
-       results = [val for val in list_value_raw.values()]
-       results.append(Vg)
-       results.append(E)
-       results.append(C)
-       results.append(Vn)
-       results.append(R)
-       
-       return list_stocks, list_weights, results
-    else:
-        print("the extracted timestamps don't match")
+            results = [val for val in list_value_raw.values()]
 
-def update_weights():
-    """ A function to check if the Portfolio needs to be updated"""
+            for w in list_weights_raw:
+                results.append(w)
 
-    return True 
+            results.append(Vg)
+            results.append(E)
+            results.append(C)
+            results.append(Vn)
+            results.append(R)
+        
+            return list_stocks, results
 
-def set_previous_portfolio_state(session, portfolio_states, portfolio_weights, list_stocks, list_weights, results) :
+def set_new_portfolio_state(engine, portfolio_id, list_stocks, results) :
     """ A function to store the current state t of portfolio :
     Vi(t) : value of a stock
     wi(t) : weight of a stock 
@@ -127,37 +141,58 @@ def set_previous_portfolio_state(session, portfolio_states, portfolio_weights, l
     C(t) : Remaining cash from transaction
 
     NB: The available cash in the portfolio is C(t) - E(t)"""
-    timestamp = datetime.now().strftime('%Y-%b-%d')
+    
+    table_name = get_table_name_by_id(engine, portfolio_id)
+    if not table_name:
+        print(f"Data not found")
+        return 
+    else :
+        timestamp = datetime.now().strftime('%Y-%b-%d')
 
-    list_value = results[0:3]
+        list_value = results[0:4]
+        list_weights = results[4:8]
 
-    dict_vals = dict()
-    dict_weights = dict()
+        dict_vals = dict()
+        dict_weights = dict()
 
-    for i in range(len(list_stocks)-1):
-        stock = list_stocks[i]
-        val = list_value[i]
-        weight = list_weights[i]
+        for i in range(len(list_stocks)):
+            stock = list_stocks[i]
+            val = list_value[i]
+            weight = list_weights[i]
 
-        dict_vals[stock] = val
-        dict_weights[stock] = weight
+            dict_vals[stock] = val
+            dict_weights[stock] = weight
 
-    current_state = {
-        "timestamp": timestamp,
-        "stocks": dict_vals,
-        "gross_portfolio_value": results[4],
-        "total_transaction_fees": results[5],
-        "available_cash": results[6],
-        "net_portfolio_value": results[7],
-        "portfolio_return": results[8] 
-    }
+        current_state = {
+            "timestamp": timestamp,
+            "stocks_values": dict_vals,
+            "stocks_weights": dict_weights,
+            "gross_portfolio_value": results[8],
+            "total_transaction_fees": results[9],
+            "available_cash": results[10],
+            "net_portfolio_value": results[11],
+            "portfolio_return": results[12] 
+        }
 
-    current_weight = {
-        "timestamp": timestamp,
-        "weights": dict_weights,
-    }
+        with Session(engine) as session:
+            # Define tables
+            metadata = MetaData()
+            
+            portfolio_table = Table (
+                table_name, metadata,
+                Column("timestamp", TIMESTAMP, primary_key = True),
+                Column("stocks_values", JSON, nullable = False),
+                Column("stocks_weights", JSON, nullable = False),
+                Column("gross_portfolio_value", Float, nullable = True),
+                Column("total_transaction_fees", Float, nullable= True),
+                Column("available_cash", Float, nullable= True),
+                Column("net_portfolio_value", Float, nullable = True),
+                Column("portfolio_return", Float, nullable = True)
+            )
 
-    session.execute(portfolio_states.insert().values(current_state))
-    session.execute(portfolio_weights.insert().values(current_weight))
-    session.commit()
+            metadata.create_all(engine)
+
+            query = portfolio_table.insert().values(**current_state)
+            session.execute(query)   
+            session.commit()
 

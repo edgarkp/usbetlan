@@ -1,9 +1,11 @@
 # Import necessary modules
 from utils import Portfolio
-from backend import elt_price_data, get_previous_portfolio_state, set_previous_portfolio_state, update_weights
-from sqlalchemy.orm import Session
-from sqlalchemy import create_engine, Table, Column, MetaData, JSON, Float, TIMESTAMP
+from backend import elt_price_data, get_previous_portfolio_state, set_new_portfolio_state, check_engine
 import numpy as np
+
+# inputs to my main function
+portfolio_id = 1
+trig_update_weights = True
 
 # step 0: Connect to the database and fetch previous state
 # Connection info
@@ -16,49 +18,23 @@ database = "initial_db"
 # PostgreSQL connection string
 DATABASE_URL = f"postgresql+psycopg://{username}:{password}@{host}:{port}/{database}"
 
-engine = create_engine(DATABASE_URL)
-
 try:
-    with engine.connect() as connection:
-        print("Connection successful!")
-
-        metadata = MetaData()
-        
-        # Define tables
-        portfolio_states = Table (
-            "portfolio_states", metadata,
-            Column("timestamp", TIMESTAMP, primary_key = True),
-            Column("stocks", JSON, nullable = False),
-            Column("gross_portfolio_value", Float, nullable = True),
-            Column("total_transaction_fees", Float, nullable= True),
-            Column("available_cash", Float, nullable= True),
-            Column("net_portfolio_value", Float, nullable = True),
-            Column("portfolio_return", Float, nullable = True)
-        )
-
-        portfolio_weights = Table (
-            "portfolio_weights", metadata,
-            Column("timestamp", TIMESTAMP, primary_key = True),
-            Column("weights", JSON, nullable = False)
-        )
-    
-        metadata.create_all(engine)
-
-    with Session(engine) as session:
-        print("Retrieving data ...")
-        latest_state = get_previous_portfolio_state(session, portfolio_states, portfolio_weights)
+    engine = check_engine(DATABASE_URL)
+    print("Retrieving data ...")
+    previous_state = get_previous_portfolio_state(engine, portfolio_id)
 
 except Exception as e:
     print(f"Connection failed: {e}")
 
 # step 1 : Get necessary prices data & previous value of the stock & previous weights 
-list_stocks, list_weights_bfr, results = latest_state
+list_stocks, results = previous_state
 
 list_value = results[0:4]
-Vg_last = results[4]
-E_bfr = results[5] 
-C_bfr = results[6] 
-Vn_last = results[7] 
+list_weights_bfr = results[4:8]
+Vg_last = results[8]
+E_bfr = results[9] 
+C_bfr = results[10] 
+Vn_last = results[11] 
 df = elt_price_data(list_stocks, '1d')
 
 portfolio = Portfolio(list_stocks,list_weights_bfr,df) # current portfolio
@@ -88,9 +64,9 @@ else:
     print(f"No change in gross portfolio value")
 
 # step 3 : Calculate requested weights W(t)
-trig_update_weights = update_weights() 
 if not(trig_update_weights):
-    list_weights = list_weights_bfr
+    print('No weights update')
+    list_weights_afr = list_weights_bfr
 else:
     print("Estimating the optimal weights with current data ...")
     list_weights_opti = portfolio.get_optimal_weights(5000).tolist() 
@@ -160,40 +136,44 @@ else:
         average_fee_per_stock_transaction = 10 ; # 10 dollar
         E = average_fee_per_stock_transaction*len(list_stocks) 
 
-# step 5: Calculate realized weights, new gross portfolio & cash value
-results = stock_val_afr # instantiante the data to store
-Vg_afr = sum(stock_val_afr) # new gross portfolio value
-list_weights_afr = [val/Vg_afr for val in stock_val_afr] # realized weights
-C = Vg_bfr - Vg_afr # cash left from transaction
-results.append(Vg_afr)
-results.append(E)
-results.append(C)
+    # step 5: Calculate realized weights, new gross portfolio & cash value
+    results = [] # instantiante the data to store
+    list_weights_afr = []
 
-# step 6: Calculate the net portfolio value Vn(t)
-Vn = Vg_afr-E+C 
-results.append(Vn)
+    results = stock_val_afr 
 
-# step 7 : Calculate the yield R(t)
-R = (Vn - Vn_last)/Vn_last
-results.append(R)
+    Vg_afr = sum(stock_val_afr) # new gross portfolio value
+    for val in stock_val_afr :# realized weights
+        w = val/Vg_afr
+        results.append(w)
+       # list_weights_afr.append(w)
+    
+    C = Vg_bfr - Vg_afr # cash left from transaction
+    results.append(Vg_afr)
+    results.append(E)
+    results.append(C)
 
-print(f"Current state of your portfolio after allocation : \
-      {'\n'}    Gross portfolio value: {round(Vg_afr)} \
-      {'\n'}    Available Cash : {round(C - E)} \
-      {'\n'}    Net portfolio value: {round(Vn)}")
-print(f"Allocation evolution (previous -> requested -> current): ")
-for i,w in enumerate(list_weights_opti):
-        print(f"{list_stocks[i]} : {round(list_weights_bfr[i]*100)}% -> {round(w*100)}% -> {round(list_weights_afr[i]*100)}%")
+    # step 6: Calculate the net portfolio value Vn(t)
+    Vn = Vg_afr-E+C 
+    results.append(Vn)
+
+    # step 7 : Calculate the yield R(t)
+    R = (Vn - Vn_last)/Vn_last
+    results.append(R)
+
+    print(f"Current state of your portfolio after allocation : \
+        {'\n'}    Gross portfolio value: {round(Vg_afr)} \
+        {'\n'}    Available Cash : {round(C - E)} \
+        {'\n'}    Net portfolio value: {round(Vn)}")
+    
+    print(f"Allocation evolution (previous -> requested -> current): ")
+    for i,w in enumerate(list_weights_opti):
+            print(f"{list_stocks[i]} : {round(list_weights_bfr[i]*100)}% -> {round(w*100)}% -> {round(list_weights_afr[i]*100)}%")
 
 # step 8 : Save results
-with Session(engine) as session:
-    print("Storing data ...")
-    # print(list_weights_afr)
-    # print(list_stocks)
-    # print(len(list_stocks))
-    # print(results)
-    set_previous_portfolio_state(session, portfolio_states, portfolio_weights, list_stocks, list_weights_afr, results)
-    print("Storing complete")
+print("Storing data ...")
+set_new_portfolio_state(engine, portfolio_id, list_stocks, results)
+print("Storing complete")
     
 
     
