@@ -115,20 +115,24 @@ def get_previous_portfolio_state(engine, portfolio_id) :
             data_states = session.execute(query).fetchone()
             (timestamp, list_value_raw, list_weights_raw, Vg, E, C, Vn, R) = data_states
 
-            list_stocks = [i for i in list_value_raw.keys()]
+            if timestamp.strftime('%Y-%b-%d') == datetime.now().strftime('%Y-%b-%d'):
+                print("Today's data has already been stored. Try tomorrow ")
+                return None
+            else:
+                list_stocks = [i for i in list_value_raw.keys()]
 
-            results = [val for val in list_value_raw.values()]
+                results = [val for val in list_value_raw.values()]
 
-            for w in list_weights_raw:
-                results.append(w)
+                list_weights = [val for val in list_weights_raw.values()]
+                results.extend(list_weights)
 
-            results.append(Vg)
-            results.append(E)
-            results.append(C)
-            results.append(Vn)
-            results.append(R)
-        
-            return list_stocks, results
+                results.append(Vg)
+                results.append(E)
+                results.append(C)
+                results.append(Vn)
+                results.append(R)
+            
+                return list_stocks, results
 
 def set_new_portfolio_state(engine, portfolio_id, list_stocks, results) :
     """ A function to store the current state t of portfolio :
@@ -148,6 +152,9 @@ def set_new_portfolio_state(engine, portfolio_id, list_stocks, results) :
         return 
     else :
         timestamp = datetime.now().strftime('%Y-%b-%d')
+
+        # timestamp = datetime.now() - timedelta(days=1)
+        # timestamp = timestamp.strftime('%Y-%b-%d')
 
         list_value = results[0:4]
         list_weights = results[4:8]

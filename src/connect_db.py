@@ -20,8 +20,9 @@ try:
     list_stocks = ['BNP.PA', 'IPS.PA', 'TTE.PA', 'STMPA.PA']
     list_weights_afr = [0.25, 0.25, 0.25, 0.25]
     results = [25000, 25000, 25000, 25000, 0.25, 0.25, 0.25, 0.25, 100000, 0, 0, 100000,  0]
-    for id in range(1,4):
-        set_new_portfolio_state(engine, id, list_stocks, results)
+    id = 4
+    # for id in range(1,4):
+    set_new_portfolio_state(engine, id, list_stocks, results)
         
 except Exception as e:
     print(f"Connection failed: {e}")
