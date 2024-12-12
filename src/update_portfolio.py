@@ -2,6 +2,7 @@
 from utils import Portfolio
 from backend import elt_price_data, get_previous_portfolio_state, set_new_portfolio_state, check_engine
 import numpy as np
+import os
 
 # inputs to my main function
 PORTFOLIO_ID = 4
@@ -9,15 +10,15 @@ TRIG_UPDATE_WEIGHTS = False
 TRIG_METH_EXP = True # consider transaction fee per number of stocks . otherwise, consider fees per transaction
 
 # Connection info
-USERNAME = "postgres"
-PASSWORD = "myfirstdatabase"
-HOST = "portfoliodb.cxcciogmujrs.eu-north-1.rds.amazonaws.com"
-PORT = "5432"
-DATABASE = "initial_db"
+DB_USERNAME = os.environ['DB_USERNAME']
+DB_PASSWORD = os.environ['DB_PASSWORD']
+DB_HOST = os.environ['DB_HOST']
+DB_PORT = os.environ['DB_PORT']
+DB_NAME = os.environ['DB_NAME']
 
 # step 0: Connect to the database and fetch previous state
 # PostgreSQL connection string
-DATABASE_URL = f"postgresql+psycopg://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
+DATABASE_URL = f"postgresql+psycopg://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 try:
     engine = check_engine(DATABASE_URL)
