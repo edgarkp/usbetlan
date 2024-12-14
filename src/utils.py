@@ -73,17 +73,6 @@ class Portfolio:
       # Optimal allocation
       return all_weights[ind_opti,:]
 
-# class PortfolioState(Portfolio):
-#    """" A class to define the portfolio status"""
-
-#    def __init__(self, stock_value, gross_value, transaction_fees, gross_cash, net_value, return_port) :
-#         self.stock_value = stock_value 
-#         self.gross_value = gross_value 
-#         self.transaction_fees = transaction_fees 
-#         self.gross_cash = gross_cash 
-#         self.net_value = net_value 
-#         self.return_port = return_port 
-
 def plot_correlation(df):
     """" A function to evaluate the matrix correlation of stocks in your portfolio """
     corr = df.corr()

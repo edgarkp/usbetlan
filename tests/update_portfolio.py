@@ -1,6 +1,6 @@
 # Import necessary modules
-from utils import Portfolio
-from backend import elt_price_data, get_previous_portfolio_state, set_new_portfolio_state, check_engine
+from src.utils import Portfolio
+from src.backend import elt_price_data, get_previous_portfolio_state, set_new_portfolio_state, check_engine
 import numpy as np
 import os
 

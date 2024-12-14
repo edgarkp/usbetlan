@@ -1,4 +1,4 @@
-from backend import get_previous_portfolio_state, set_new_portfolio_state, get_table_name_by_id,check_engine
+from src.backend import get_previous_portfolio_state, set_new_portfolio_state, get_table_name_by_id,check_engine
 import os
 
 # Connection info

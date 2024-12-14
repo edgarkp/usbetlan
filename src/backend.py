@@ -59,24 +59,27 @@ def format_price_data(dict_stock_data):
 
     return df
 
-def elt_price_data(list_stocks, interval):
+def elt_price_data(list_stocks, interval, preload = False):
     """" A function performing ELT (Extract Load Transform): 
     to read and format the price data fetched in Yahoo Finance """
     filename = ''
     for stock in list_stocks:
         filename += stock.split('.')[0] + '_'
 
-    filename = filename + date.today().strftime('%Y_%m_%d') 
-    filepath = 'data/' + filename
-    if os.path.exists(filepath) :
-        print(f"Loading data from {filepath}")
-        df = pd.read_csv(filepath, index_col = 'Date', parse_dates = True)
-    else: 
-        results = fetch_price_data(list_stocks, interval)
-        df = format_price_data(results)
-
-        print(f"Saving data for {filepath}")
-        df.to_csv(filepath)
+    if preload:
+        filename = filename + date.today().strftime('%Y_%m_%d') 
+        filepath = 'artifacts/price_data' + filename
+        if os.path.exists(filepath) :
+            print(f"Loading data from {filepath}")
+            df = pd.read_csv(filepath, index_col = 'Date', parse_dates = True)    
+        else: 
+            results = fetch_price_data(list_stocks, interval)
+            df = format_price_data(results)
+            print(f"Saving data for {filepath}")
+            df.to_csv(filepath)
+    else:
+            results = fetch_price_data(list_stocks, interval)
+            df = format_price_data(results)
 
     return df
 
