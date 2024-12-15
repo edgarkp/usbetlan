@@ -1,0 +1,75 @@
+name: Portfolio Update
+
+on:
+  workflow_call:
+    inputs:
+      portfolio_id:
+        required: true
+        type: number
+      trig_meth_exp:
+        required: true
+        type: boolean
+      trig_update_weights:
+        required: true
+        type: boolean
+    secrets:
+      DB_USERNAME:
+        required: true
+      DB_PASSWORD:
+        required: true
+      DB_HOST:
+        required: true
+      DB_PORT:
+        required: true
+      DB_NAME:
+        required: true
+
+jobs:
+  update-portfolio:
+    name: Update Portfolio ${{ inputs.portfolio_id }}
+    environment: production  # Match the environment in main workflow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Debug Secrets
+        run: |
+          if [ -z "$DB_USERNAME" ]; then
+            echo "DB_USERNAME is empty!"
+            exit 1
+          else
+            echo "DB_USERNAME is set (masked in logs)."
+          fi
+        env:
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: 🐍 Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13' 
+      - name: 📦 Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest  # Ensure latest Poetry version
+      - name: 📦 Install dependencies
+        run: |
+          poetry install --no-interaction
+      - name: Run Portfolio Update Function
+        env:
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+        run: |
+          TRIG_UPDATE_WEIGHTS_FLAG=$([[ "${{ inputs.trig_update_weights }}" == "true" ]] && echo 1 || echo 0)
+          TRIG_METH_EXP_FLAG=$([[ "${{ inputs.trig_meth_exp }}" == "true" ]] && echo 1 || echo 0)
+
+          poetry run python -m test_app_cicd \
+                              ${{ inputs.portfolio_id }} \
+                              $TRIG_UPDATE_WEIGHTS_FLAG \
+                              $TRIG_METH_EXP_FLAG \
+                              "$DB_USERNAME" \
+                              "$DB_PASSWORD" \
+                              "$DB_HOST" \
+                              "$DB_PORT" \
+                              "$DB_NAME"
