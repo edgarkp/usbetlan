@@ -4,16 +4,8 @@ import sys
 
 def update_portfolio(PORTFOLIO_ID, TRIG_UPDATE_WEIGHTS,TRIG_METH_EXP,
                      DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME):
-
-    print(f'DB_USERNAME : {DB_USERNAME}')
-    print(f'DB_PASSWORD : {DB_PASSWORD}')
-    print(f'DB_HOST : {DB_HOST}')
-    print(f'DB_PORT: {DB_PORT}')
-    print(f'DB_NAME: {DB_PORT}')
     
     DATABASE_URL = f"postgresql+psycopg://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
-    print(f'DATABASE URL: {DATABASE_URL}')
 
     try:
         engine = check_engine(DATABASE_URL)
