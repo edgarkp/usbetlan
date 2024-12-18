@@ -38,6 +38,7 @@ jobs:
         run: |
           python <<EOF
           from datetime import datetime
+          import os
 
           today = datetime.utcnow()
           is_weekly = today.weekday() == 0  # Monday
