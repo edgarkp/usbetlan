@@ -20,17 +20,99 @@ Generate data function will create the data from the 7th october to 20th decembe
 """
 
 # before launching the app, ensure that a sql command was run to set the initial state of the 4 portofolios
+"""
+INSERT INTO portfolio_landry (
+    timestamp,
+    stocks_values,
+    stocks_weights,
+    gross_portfolio_value,
+    total_transaction_fees,
+    available_cash,
+    net_portfolio_value,
+    portfolio_return 
+)
+VALUES (    
+    '2024-10-07',
+    '{"NOC": 10000, "LMT": 10000, "LDOS": 10000, "BAH": 10000, "DFEN": 10000, "EOG": 10000, "CVX": 10000, "XOM": 10000, "GM": 10000, "TSLA": 10000, "PHUN": 10000, "DJT": 10000}'::JSONB,
+  '{"NOC": 0.083, "LMT": 0.083, "LDOS": 0.083, "BAH": 0.083, "DFEN": 0.083, "EOG": 0.083, "CVX": 0.083, "XOM": 0.083, "GM": 0.083, "TSLA": 0.083, "PHUN": 0.083, "DJT": 0.083}'::JSONB,
+    120000,
+    0,
+    0,
+    120000,
+    0.0
+);
 
+INSERT INTO portfolio_edgar_daily (
+    timestamp,
+    stocks_values,
+    stocks_weights,
+    gross_portfolio_value,
+    total_transaction_fees,
+    available_cash,
+    net_portfolio_value,
+    portfolio_return 
+)
+VALUES (    
+    '2024-10-07',
+    '{"NOC": 10000, "LMT": 10000, "LDOS": 10000, "BAH": 10000, "DFEN": 10000, "EOG": 10000, "CVX": 10000, "XOM": 10000, "GM": 10000, "TSLA": 10000, "PHUN": 10000, "DJT": 10000}'::JSONB,
+  '{"NOC": 0.083, "LMT": 0.083, "LDOS": 0.083, "BAH": 0.083, "DFEN": 0.083, "EOG": 0.083, "CVX": 0.083, "XOM": 0.083, "GM": 0.083, "TSLA": 0.083, "PHUN": 0.083, "DJT": 0.083}'::JSONB,
+    120000,
+    0,
+    0,
+    120000,
+    0.0
+);
 
+INSERT INTO portfolio_edgar_weekly (
+    timestamp,
+    stocks_values,
+    stocks_weights,
+    gross_portfolio_value,
+    total_transaction_fees,
+    available_cash,
+    net_portfolio_value,
+    portfolio_return 
+)
+VALUES (    
+    '2024-10-07',
+    '{"NOC": 10000, "LMT": 10000, "LDOS": 10000, "BAH": 10000, "DFEN": 10000, "EOG": 10000, "CVX": 10000, "XOM": 10000, "GM": 10000, "TSLA": 10000, "PHUN": 10000, "DJT": 10000}'::JSONB,
+  '{"NOC": 0.083, "LMT": 0.083, "LDOS": 0.083, "BAH": 0.083, "DFEN": 0.083, "EOG": 0.083, "CVX": 0.083, "XOM": 0.083, "GM": 0.083, "TSLA": 0.083, "PHUN": 0.083, "DJT": 0.083}'::JSONB,
+    120000,
+    0,
+    0,
+    120000,
+    0.0
+);
+
+INSERT INTO portfolio_edgar_monthly (
+    timestamp,
+    stocks_values,
+    stocks_weights,
+    gross_portfolio_value,
+    total_transaction_fees,
+    available_cash,
+    net_portfolio_value,
+    portfolio_return 
+)
+VALUES (    
+    '2024-10-07',
+    '{"NOC": 10000, "LMT": 10000, "LDOS": 10000, "BAH": 10000, "DFEN": 10000, "EOG": 10000, "CVX": 10000, "XOM": 10000, "GM": 10000, "TSLA": 10000, "PHUN": 10000, "DJT": 10000}'::JSONB,
+  '{"NOC": 0.083, "LMT": 0.083, "LDOS": 0.083, "BAH": 0.083, "DFEN": 0.083, "EOG": 0.083, "CVX": 0.083, "XOM": 0.083, "GM": 0.083, "TSLA": 0.083, "PHUN": 0.083, "DJT": 0.083}'::JSONB,
+    120000,
+    0,
+    0,
+    120000,
+    0.0
+);
+"""
 # create a function that will take as input the datetime and identify which trigger is necessary and update the portfolio accordingly
 from src.update_portfolio import update_portfolio
-import os
 from datetime import date, timedelta
+import time
+import os
 
 
 def get_input_update_portofolio(date):
-    print(date)
-    print(date.utcnow())
     is_weekly = date.weekday() == 0  # Monday
     is_monthly = date.day == 1       # First day of the month
 
@@ -45,17 +127,26 @@ def update_portfolios(date):
     trig_update_weights_list = get_input_update_portofolio(date)
 
     for index, trig in enumerate(trig_update_weights_list):
-        update_portfolio(index, 
+        update_portfolio(date,
+                         index+1, 
                          trig,
                          False,
-                         os.getenv['DB_USERNAME'], 
-                         os.getenv['DB_PASSWORD'], 
-                         os.getenv['DB_HOST'], 
-                         os.getenv['DB_PORT'], 
-                         os.getenv['DB_NAME'])
+                         os.getenv('DB_USERNAME'), 
+                         os.getenv('DB_PASSWORD'), 
+                         os.getenv('DB_HOST'), 
+                         os.getenv('DB_PORT'), 
+                         os.getenv('DB_NAME'))
+        
+# date_test = date(2024,10,8)
+# update_portfolios(date_test)
 
 # use the above function to loop all the datetimes from the 8th october to 20th december
-start = date(2024, 10, 8)
+## Run this for thest
+# start = date(2024, 10, 8)
+# end = date(2024, 10, 14)
+
+## Run this rest to complete the data filling
+start = date(2024, 10, 15)
 end = date(2024, 12, 20)
 
 # get list of all days
@@ -70,3 +161,4 @@ print('Number of business days is:', count)
 for day in all_days:
     if day.weekday() < 5:
         update_portfolios(day)
+        time.sleep(3)

@@ -137,7 +137,7 @@ def get_previous_portfolio_state(engine, portfolio_id) :
             
                 return list_stocks, results
 
-def set_new_portfolio_state(engine, portfolio_id, list_stocks, results) :
+def set_new_portfolio_state(engine, portfolio_id, list_stocks, results, timestamp) :
     """ A function to store the current state t of portfolio :
     Vi(t) : value of a stock
     wi(t) : weight of a stock 
@@ -154,13 +154,15 @@ def set_new_portfolio_state(engine, portfolio_id, list_stocks, results) :
         print(f"Data not found")
         return 
     else :
-        timestamp = datetime.now().strftime('%Y-%b-%d')
+        if timestamp is None:
+            timestamp = datetime.now().strftime('%Y-%b-%d')
 
         # timestamp = datetime.now() - timedelta(days=1)
         # timestamp = timestamp.strftime('%Y-%b-%d')
 
-        list_value = results[0:4]
-        list_weights = results[4:8]
+        size_list = len(list_stocks)
+        list_value = results[0:size_list]
+        list_weights = results[size_list:2*size_list]
 
         dict_vals = dict()
         dict_weights = dict()
@@ -177,11 +179,11 @@ def set_new_portfolio_state(engine, portfolio_id, list_stocks, results) :
             "timestamp": timestamp,
             "stocks_values": dict_vals,
             "stocks_weights": dict_weights,
-            "gross_portfolio_value": results[8],
-            "total_transaction_fees": results[9],
-            "available_cash": results[10],
-            "net_portfolio_value": results[11],
-            "portfolio_return": results[12] 
+            "gross_portfolio_value": results[2*size_list],
+            "total_transaction_fees": results[2*size_list+1],
+            "available_cash": results[2*size_list+2],
+            "net_portfolio_value": results[2*size_list+3],
+            "portfolio_return": results[2*size_list+4] 
         }
 
         with Session(engine) as session:

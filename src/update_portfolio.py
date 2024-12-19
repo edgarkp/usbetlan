@@ -4,7 +4,7 @@ from src.backend import elt_price_data, get_previous_portfolio_state, set_new_po
 import numpy as np
 
 def update_portfolio(PORTFOLIO_ID, TRIG_UPDATE_WEIGHTS,TRIG_METH_EXP,
-                     DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME):
+                     DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME, DATE):
 
     # step 0: Connect to the database and fetch previous state
     # PostgreSQL connection string
@@ -20,12 +20,15 @@ def update_portfolio(PORTFOLIO_ID, TRIG_UPDATE_WEIGHTS,TRIG_METH_EXP,
     # step 1 : Get necessary prices data & previous portfolio state 
     list_stocks, results_bfr = previous_state
 
-    list_value = results_bfr[0:4]
-    list_weights_bfr = results_bfr[4:8]
-    Vg_last = results_bfr[8]
-    E_bfr = results_bfr[9] 
-    C_bfr = results_bfr[10] 
-    Vn_last = results_bfr[11] 
+    size_list = len(list_stocks)
+
+    list_value = results_bfr[0:size_list]
+    list_weights_bfr = results_bfr[size_list:2*size_list]
+    Vg_last = results_bfr[2*size_list]
+    E_bfr = results_bfr[2*size_list+1] 
+    C_bfr = results_bfr[2*size_list+2] 
+    Vn_last = results_bfr[2*size_list+3] 
+
     df = elt_price_data(list_stocks, '1d')
 
     portfolio = Portfolio(list_stocks,list_weights_bfr,df) # current portfolio
@@ -160,6 +163,6 @@ def update_portfolio(PORTFOLIO_ID, TRIG_UPDATE_WEIGHTS,TRIG_METH_EXP,
 
     # step 5 : Save results
     print("Storing new portfolio state ...")
-    set_new_portfolio_state(engine, PORTFOLIO_ID, list_stocks, results_afr)
+    set_new_portfolio_state(engine, PORTFOLIO_ID, list_stocks, results_afr, DATE)
     print("Storing complete")
 
