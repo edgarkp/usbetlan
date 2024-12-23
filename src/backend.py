@@ -9,17 +9,16 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 
-def fetch_price_data(list_stocks, interval):
+def fetch_price_data(list_stocks, timestamp = date.today(), interval = '1d'):
     """" A function to read the data from Yahoo Finance """
     dict_stock_data = dict()
 
-    today = date.today()
     for stock in list_stocks:
         #ticker = yf.Ticker(stock)
         if interval == '1d' :
-            stock_data = yf.download(stock, interval='1d')    
+            stock_data = yf.download(stock, end = timestamp+timedelta(days=1), interval='1d')    
         else : # preferably intraday data (ex: 1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h)
-            stock_data = yf.download(stock, start = today, end = None, interval= interval)
+            stock_data = yf.download(stock, start = timestamp, end = None, interval= interval)
 
         dict_stock_data[stock] = stock_data
 
@@ -59,7 +58,7 @@ def format_price_data(dict_stock_data):
 
     return df
 
-def elt_price_data(list_stocks, interval, preload = False):
+def elt_price_data(list_stocks, timestamp = date.today(), interval = '1d', preload = False):
     """" A function performing ELT (Extract Load Transform): 
     to read and format the price data fetched in Yahoo Finance """
     filename = ''
@@ -67,18 +66,18 @@ def elt_price_data(list_stocks, interval, preload = False):
         filename += stock.split('.')[0] + '_'
 
     if preload:
-        filename = filename + date.today().strftime('%Y_%m_%d') 
+        filename = filename + timestamp.strftime('%Y_%m_%d')
         filepath = 'artifacts/price_data' + filename
         if os.path.exists(filepath) :
             print(f"Loading data from {filepath}")
             df = pd.read_csv(filepath, index_col = 'Date', parse_dates = True)    
         else: 
-            results = fetch_price_data(list_stocks, interval)
+            results = fetch_price_data(list_stocks, timestamp, interval)
             df = format_price_data(results)
             print(f"Saving data for {filepath}")
             df.to_csv(filepath)
     else:
-            results = fetch_price_data(list_stocks, interval)
+            results = fetch_price_data(list_stocks, timestamp, interval)
             df = format_price_data(results)
 
     return df
@@ -98,7 +97,7 @@ def get_table_name_by_id(engine, portfolio_id):
         result = query_portfolio.fetchone()
         return result[0] if result else None
 
-def get_previous_portfolio_state(engine, portfolio_id) :
+def get_previous_portfolio_state(engine, portfolio_id, timestamp_current = None) :
     """ A function to retrieve last state (t - 1) of portfolio :
     Vi(t-1) : value of a stock
     wi(t-1) : weight of a stock 
@@ -114,7 +113,10 @@ def get_previous_portfolio_state(engine, portfolio_id) :
         return 
     else :
         with Session(engine) as session:
-            query = text(f"SELECT * FROM {table_name} ORDER BY timestamp DESC LIMIT 1")
+            if timestamp_current is None :
+                query = text(f"SELECT * FROM {table_name} ORDER BY timestamp DESC LIMIT 1")
+            else:
+                query = text(f"SELECT * FROM {table_name} where timestamp < '{timestamp_current}' ORDER BY timestamp DESC LIMIT 1")
             data_states = session.execute(query).fetchone()
             (timestamp, list_value_raw, list_weights_raw, Vg, E, C, Vn, R) = data_states
 
@@ -137,7 +139,7 @@ def get_previous_portfolio_state(engine, portfolio_id) :
             
                 return list_stocks, results
 
-def set_new_portfolio_state(engine, portfolio_id, list_stocks, results, timestamp) :
+def set_new_portfolio_state(engine, portfolio_id, list_stocks, results, timestamp = None) :
     """ A function to store the current state t of portfolio :
     Vi(t) : value of a stock
     wi(t) : weight of a stock 

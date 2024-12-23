@@ -1,11 +1,9 @@
 # Import necessary modules
-from src.utils import Portfolio
+from src.utils import Portfolio, number_stocks_to_allocate, calculate_expenses, place_orders
 from src.backend import elt_price_data, get_previous_portfolio_state, set_new_portfolio_state, check_engine
-import numpy as np
 
 def update_portfolio(PORTFOLIO_ID, TRIG_UPDATE_WEIGHTS,TRIG_METH_EXP,
                      DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME, DATE):
-
     # step 0: Connect to the database and fetch previous state
     # PostgreSQL connection string
     DATABASE_URL = f"postgresql+psycopg://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
@@ -13,7 +11,7 @@ def update_portfolio(PORTFOLIO_ID, TRIG_UPDATE_WEIGHTS,TRIG_METH_EXP,
     try:
         engine = check_engine(DATABASE_URL)
         print("Retrieving data ...")
-        previous_state = get_previous_portfolio_state(engine, PORTFOLIO_ID)
+        previous_state = get_previous_portfolio_state(engine, PORTFOLIO_ID, timestamp_current=DATE)
     except Exception as e:
         print(f"Connection failed: {e}")
 
@@ -29,7 +27,7 @@ def update_portfolio(PORTFOLIO_ID, TRIG_UPDATE_WEIGHTS,TRIG_METH_EXP,
     C_bfr = results_bfr[2*size_list+2] 
     Vn_last = results_bfr[2*size_list+3] 
 
-    df = elt_price_data(list_stocks, '1d')
+    df = elt_price_data(list_stocks, interval = '1d', timestamp = DATE)
 
     portfolio = Portfolio(list_stocks,list_weights_bfr,df) # current portfolio
 
@@ -92,40 +90,24 @@ def update_portfolio(PORTFOLIO_ID, TRIG_UPDATE_WEIGHTS,TRIG_METH_EXP,
         
         # 4a - compute the requested stock values according to newly optimal weights
         stock_val_req = [(Vg_bfr - E_bfr + C_bfr)*w for w in list_weights_opti]
-        # 4b - compute the number of actions in transaction and each stock realized value
-        delta_stock_val = stock_val_req - stock_val_bfr
-        delta_stock_val = delta_stock_val.values.flatten().tolist() 
+        delta_stock_val_req = stock_val_req - stock_val_bfr
+
+        delta_stock_val_req = delta_stock_val_req.values.flatten().tolist() 
         list_price_today = list_price.values[1].flatten().tolist() 
+  
+        list_num_stocks_req = number_stocks_to_allocate(delta_stock_val_req, list_price_today)
+        E_req = calculate_expenses(list_stocks, list_num_stocks_req, TRIG_METH_EXP) # anticipated expenses
+        
+        # 4b - compute the realized transactions
+        stock_val_realized = [(Vg_bfr - E_bfr + C_bfr - E_req)*w for w in list_weights_opti]
+        delta_stock_val_realized = stock_val_realized - stock_val_bfr
+        delta_stock_val_realized = delta_stock_val_realized.values.flatten().tolist()
         stock_val_bfr = stock_val_bfr.values.flatten().tolist() 
 
-        list_num_stocks = []
-        stock_val_afr = []
+        list_num_stocks_orders , stock_val_afr = place_orders(delta_stock_val_realized, list_price_today, list_stocks, stock_val_bfr)
         
-        for i, val in enumerate(delta_stock_val):
-            num_stock_in_transit = delta_stock_val[i] / list_price_today[i]
-            num_stock_in_transit = abs(np.floor(num_stock_in_transit).item())
-
-            if num_stock_in_transit == 0:
-                list_num_stocks.append(num_stock_in_transit)
-                stock_val_afr.append(stock_val_bfr[i])
-                print(f"No orders placed for {list_stocks[i]}")
-            else:
-                if (val < 0) :
-                    list_num_stocks.append(-num_stock_in_transit)
-                    stock_val_afr.append(stock_val_bfr[i]-num_stock_in_transit*list_price_today[i])
-                    print(f"Selling {num_stock_in_transit} stocks on {list_stocks[i]}")
-                else : 
-                    list_num_stocks.append(num_stock_in_transit)
-                    stock_val_afr.append(stock_val_bfr[i]+num_stock_in_transit*list_price_today[i])
-                    print(f"Buying {num_stock_in_transit} stocks on {list_stocks[i]}")
-
-        # 4c - compute expenses related to the different transactions
-        if TRIG_METH_EXP:
-            average_fee_per_stock = 0.01 ; # 0.01 dollar
-            E = sum([average_fee_per_stock*abs(num) for num in list_num_stocks])
-        else:
-            average_fee_per_stock_transaction = 10 ; # 10 dollar
-            E = average_fee_per_stock_transaction*len(list_stocks) 
+        # 4c - compute expenses related to the different realized transactions
+        E = calculate_expenses(list_stocks, list_num_stocks_orders, TRIG_METH_EXP)
 
         # 4d - calculate realized weights, new gross portfolio & cash value
         results_afr = [] # instantiante the data to store
@@ -138,7 +120,7 @@ def update_portfolio(PORTFOLIO_ID, TRIG_UPDATE_WEIGHTS,TRIG_METH_EXP,
         
         results_afr.extend(list_weights_afr)
 
-        C = Vg_bfr - Vg_afr # cash left from transaction
+        C = Vg_bfr - E_bfr + C_bfr - Vg_afr # cash left from transaction : what i try to allocate vs what i allocated
         results_afr.append(Vg_afr)
         results_afr.append(E)
         results_afr.append(C)
@@ -160,9 +142,8 @@ def update_portfolio(PORTFOLIO_ID, TRIG_UPDATE_WEIGHTS,TRIG_METH_EXP,
         for i,w in enumerate(list_weights_opti):
                 print(f"{list_stocks[i]} : {round(list_weights_bfr[i]*100)}% -> {round(w*100)}% -> {round(list_weights_afr[i]*100)}%")
 
-
     # step 5 : Save results
     print("Storing new portfolio state ...")
-    set_new_portfolio_state(engine, PORTFOLIO_ID, list_stocks, results_afr, DATE)
+    set_new_portfolio_state(engine, PORTFOLIO_ID, list_stocks, results_afr, timestamp = DATE)
     print("Storing complete")
 

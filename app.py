@@ -1,5 +1,6 @@
 # Import necessary modules
 from src.update_portfolio import update_portfolio
+from datetime import date
 import sys
 
 if __name__ == '__main__':
@@ -18,5 +19,7 @@ if __name__ == '__main__':
         DB_PORT = sys.argv[7]
         DB_NAME = sys.argv[8]
 
+        DATE = date.today()
+        
         update_portfolio(PORTFOLIO_ID, TRIG_UPDATE_WEIGHTS,TRIG_METH_EXP, 
-                        DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME)
+                        DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME, DATE)

@@ -127,15 +127,15 @@ def update_portfolios(date):
     trig_update_weights_list = get_input_update_portofolio(date)
 
     for index, trig in enumerate(trig_update_weights_list):
-        update_portfolio(date,
-                         index+1, 
+        update_portfolio(index+1, 
                          trig,
                          False,
                          os.getenv('DB_USERNAME'), 
                          os.getenv('DB_PASSWORD'), 
                          os.getenv('DB_HOST'), 
                          os.getenv('DB_PORT'), 
-                         os.getenv('DB_NAME'))
+                         os.getenv('DB_NAME'),
+                         date)
         
 # date_test = date(2024,10,8)
 # update_portfolios(date_test)
@@ -147,7 +147,7 @@ def update_portfolios(date):
 
 ## Run this rest to complete the data filling
 start = date(2024, 10, 15)
-end = date(2024, 12, 20)
+end = date(2024, 12, 19)
 
 # get list of all days
 all_days = [start + timedelta(x + 1) for x in range((end - start).days)]

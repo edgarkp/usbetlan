@@ -64,7 +64,7 @@ jobs:
           TRIG_UPDATE_WEIGHTS_FLAG=$([[ "${{ inputs.trig_update_weights }}" == "true" ]] && echo 1 || echo 0)
           TRIG_METH_EXP_FLAG=$([[ "${{ inputs.trig_meth_exp }}" == "true" ]] && echo 1 || echo 0)
 
-          poetry run python -m test_app_cicd \
+          poetry run python -m app \
                               ${{ inputs.portfolio_id }} \
                               $TRIG_UPDATE_WEIGHTS_FLAG \
                               $TRIG_METH_EXP_FLAG \
@@ -72,4 +72,4 @@ jobs:
                               "$DB_PASSWORD" \
                               "$DB_HOST" \
                               "$DB_PORT" \
-                              "$DB_NAME"
+                              "$DB_NAME" \
