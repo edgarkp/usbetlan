@@ -104,6 +104,7 @@ VALUES (
     120000,
     0.0
 );
+
 """
 # create a function that will take as input the datetime and identify which trigger is necessary and update the portfolio accordingly
 from src.update_portfolio import update_portfolio
@@ -146,8 +147,8 @@ def update_portfolios(date):
 # end = date(2024, 10, 14)
 
 ## Run this rest to complete the data filling
-start = date(2024, 10, 15)
-end = date(2024, 12, 19)
+start = date(2024, 10, 8)
+end = date(2024, 12, 24)
 
 # get list of all days
 all_days = [start + timedelta(x + 1) for x in range((end - start).days)]
