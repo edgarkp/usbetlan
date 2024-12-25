@@ -29,11 +29,11 @@ jobs:
           import os
 
           today = datetime.utcnow().date()
-          us_holidays = holidays.US()  
-          is_holiday = today in us_holidays
+          nyse_holidays = holidays.NYSE()  
+          is_holiday = today in nyse_holidays
           if is_holiday:
-              holiday_name = us_holidays[today]
-              print(f"Today is a public holiday: {holiday_name}")
+              nyse_holiday_name = nyse_holidays[today]
+              print(f"Today is a public holiday: {nyse_holiday_name}")
           else:
               print("US Markets are open. We can proceed with the portfolio updates")
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
@@ -52,7 +52,7 @@ jobs:
   pre-stage:
     name: 🧹 Cancel previous runs
     runs-on: ubuntu-latest
-    needs: [holiday-check, skip-check]
+    needs: holiday-check
     if: ${{ needs.holiday-check.outputs.is_holiday == 'false' }}
     steps:
       - name: 🛑 Cancel Previous Runs

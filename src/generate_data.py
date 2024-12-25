@@ -109,11 +109,14 @@ VALUES (
 # create a function that will take as input the datetime and identify which trigger is necessary and update the portfolio accordingly
 from src.update_portfolio import update_portfolio
 from datetime import date, timedelta
+import holidays
 import time
-import os
+# import os
+import sys
 
 
 def get_input_update_portofolio(date):
+    print("Updating the trigger variables")
     is_weekly = date.weekday() == 0  # Monday
     is_monthly = date.day == 1       # First day of the month
 
@@ -124,42 +127,46 @@ def get_input_update_portofolio(date):
     
     return [trig_update_weights_1, trig_update_weights_2,trig_update_weights_3, trig_update_weights_4]
 
-def update_portfolios(date):
+def update_portfolios(date, DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME):
     trig_update_weights_list = get_input_update_portofolio(date)
-
+    
     for index, trig in enumerate(trig_update_weights_list):
+        print(f"Updating portfolios N°{index+1}")
         update_portfolio(index+1, 
                          trig,
                          False,
-                         os.getenv('DB_USERNAME'), 
-                         os.getenv('DB_PASSWORD'), 
-                         os.getenv('DB_HOST'), 
-                         os.getenv('DB_PORT'), 
-                         os.getenv('DB_NAME'),
+                         DB_USERNAME, 
+                         DB_PASSWORD, 
+                         DB_HOST, 
+                         DB_PORT, 
+                         DB_NAME,
                          date)
-        
-# date_test = date(2024,10,8)
-# update_portfolios(date_test)
+    
 
-# use the above function to loop all the datetimes from the 8th october to 20th december
-## Run this for thest
-# start = date(2024, 10, 8)
-# end = date(2024, 10, 14)
+def generate_data(start, end, DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME):
+    nyse_holidays = set(holidays.NYSE(years=range(start.year, end.year + 1)))
+    all_days = list([start])
+    rest_days = [start + timedelta(x + 1) for x in range((end - start).days)]
+    all_days.extend(rest_days)
 
-## Run this rest to complete the data filling
-start = date(2024, 10, 8)
-end = date(2024, 12, 24)
+    business_days = [day for day in all_days if day.weekday() < 5 and day not in nyse_holidays]
+    print('Number of business days is:', len(business_days))
 
-# get list of all days
-all_days = [start + timedelta(x + 1) for x in range((end - start).days)]
-
-# filter business days
-# weekday from 0 to 4. 0 is monday adn 4 is friday
-# increase counter in each iteration if it is a weekday
-count = sum(1 for day in all_days if day.weekday() < 5)
-print('Number of business days is:', count)
-
-for day in all_days:
-    if day.weekday() < 5:
-        update_portfolios(day)
+    for day in business_days:
+        print(f"updating portfolios for day {day}")
+        update_portfolios(day, DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME)
         time.sleep(3)
+
+if __name__ == '__main__':
+    DB_USERNAME = sys.argv[1]
+    DB_PASSWORD = sys.argv[2]
+    DB_HOST = sys.argv[3]
+    DB_PORT = sys.argv[4]
+    DB_NAME = sys.argv[5] 
+
+    ## Run this rest to complete the data filling
+    start = date(2024, 10, 8)
+    end = date(2024, 12, 26)
+
+    print("Ready to generate data ...")
+    generate_data(start, end, DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME)           
