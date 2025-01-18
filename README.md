@@ -45,9 +45,12 @@ The analysis was made on 4 portfolios :
 - my monthly-updated portfolio named *portfolio ED monthly*
 
 We decided to use Markwotiz theory to allocate my portfolio. The theory is described by a set of statistical procedures to determine the allocation that maximizes the portfolio's expected return and minimizes its associated risk. It is defined under the framework of a risk-return tradeoff graph. 
+
 ![](images/efficient-frontier.PNG)
 
-The trading system is defined as follows :
+**NB: There was no preliminary analysis (correlation, risk tolerance, ESG considerations, sector and industry exposure, market capitalization, dividend policy, etc) to choose which technique fits well according to the selected stocks**
+
+Our data-driven system is defined as follows :
 
 ![](images/system.png)
 
@@ -74,6 +77,8 @@ and create an isolated virtual environmnet for development purposes.
     ```
 Great ! your app runs locally. 
 
+It is also possible to run an offline backtesting by launching the *backtesting_offline.py* file or use it in a CI/CD by setting the yaml file *backtesting_offline.yml* . You need to set the period on which you wanna test it in the python file.
+
 ## How to deploy the app ?
 
 The idea here is that your portfolios status are updated automatically using Github Workflows. 
@@ -93,8 +98,15 @@ When the app is running, we define which portfolio should be updated. The trigge
 - ensure to set your secret environnement variables in the repo settings).
 
 
-## How to monitor our strategy with power BI?
-This part is still under construction as I'm building the dashboards locally before sharing them publicly. 
+## How to monitor our strategy ?
+We monitor using Power BI by connecting the tool to our database. We create a SQL view to ease the data processing in Power BI. For example, some KPIs can be defined such as comparative graphs based on: 
+- portfolio net value, gross value and daily return 
+- strategy allocation 
+
+![](images/kpi.PNG)
+
+**NB: A public version will be created (for those who don't have access to Power BI)**
+
 
 ## Closing
 Feel free to comment and add any constructive critics that could help me better my solution :)

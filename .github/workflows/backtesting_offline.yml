@@ -1,4 +1,4 @@
-name: Generate Initial Data
+name: Backtesting offline
 
 on:
   workflow_dispatch:  # Manual trigger for initialization
@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   populate-database:
-    name: Populate Database
+    name: Offline Backtesting
     environment: production
     runs-on: ubuntu-latest
     env:
@@ -38,7 +38,7 @@ jobs:
 
       - name: Run Generate Data Script
         run: |
-          poetry run python src/generate_data.py \
+          poetry run python src/backtesting_offline.py \
                                 "$DB_USERNAME" \
                                 "$DB_PASSWORD" \
                                 "$DB_HOST" \

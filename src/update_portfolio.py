@@ -106,7 +106,8 @@ def update_portfolio(PORTFOLIO_ID, TRIG_UPDATE_WEIGHTS,TRIG_METH_EXP,
 
         list_num_stocks_orders , stock_val_afr = place_orders(delta_stock_val_realized, list_price_today, list_stocks, stock_val_bfr)
         
-        # 4c - compute expenses related to the different realized transactions
+        # 4c - compute e
+        # xpenses related to the different realized transactions
         E = calculate_expenses(list_stocks, list_num_stocks_orders, TRIG_METH_EXP)
 
         # 4d - calculate realized weights, new gross portfolio & cash value
