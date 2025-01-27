@@ -1,5 +1,5 @@
 <div align="center">
-    <h1>Build a trading algorithm and backtesting framework using  <a href="https://docs.github.com/en/actions/writing-workflows">Github Workflows</a> and <a href="https://aws.amazon.com/">AWS</a></h1>
+    <h1>Build a simple trading algorithm and implement backtesting and online testing frameworks using  <a href="https://docs.github.com/en/actions/writing-workflows">Github Workflows</a> and <a href="https://aws.amazon.com/">AWS</a></h1>
 
 </div>
 
@@ -77,7 +77,7 @@ and create an isolated virtual environmnet for development purposes.
     ```
 Great ! your app runs locally. 
 
-It is also possible to run an offline backtesting by launching the *backtesting_offline.py* file or use it in a CI/CD by setting the yaml file *backtesting_offline.yml* . You need to set the period on which you wanna test it in the python file.
+It is also possible to run an backtesting by launching the *backtesting.py* file or use it in a CI/CD by setting the yaml file *backtesting.yml* . You need to set the period on which you wanna test it in the python file.
 
 ## How to deploy the app ?
 
